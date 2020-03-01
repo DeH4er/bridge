@@ -45,11 +45,12 @@ helpCommand :: IO ()
 helpCommand =
   putStrLn
     $  "Available commands: \n"
-    ++ "process - runs the bridge with communication via stdin/stdout\n"
-    ++ "server - runs the bridge with communication via socket."
+    <> "process - runs the bridge with communication via stdin/stdout\n"
+    <> "server - runs the bridge with communication via socket.\n"
+    <> "help - show this message."
 
 
 invalidCommand :: IO ()
 invalidCommand = do
-  putStrLn "Invalid command."
+  putStrLn "Invalid command.\n"
   helpCommand
