@@ -17,6 +17,7 @@ import           Data.Text
 data Command = Connect
              | Echo Text
 
+
 newtype CommandID = CommandID Int
 newtype CommandAction = CommandAction String
 
@@ -32,7 +33,6 @@ parseRequest raw = do
 
   command <- parseCommand action params
   return (command, id)
-
 
 
 parseCommand :: CommandAction -> Aeson.Value -> Maybe Command
