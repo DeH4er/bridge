@@ -5,6 +5,7 @@ module CommandExecutor where
 import qualified Data.Aeson                    as Aeson
 import           Data.Aeson                     ( (.=) )
 import qualified Data.ByteString               as BS
+import qualified Data.ByteString.Char8         as C
 import qualified Data.ByteString.Lazy          as BL
 import           ParseCommand
 
@@ -13,9 +14,12 @@ executeRequest requestRaw = do
   let request = parseRequest requestRaw
   case request of
     Just (command, id) -> do
+      putStrLn $ "Execute " <> show command
       response <- CommandExecutor.executeCommand command
       return $ encode response id
-    Nothing -> return "Invalid command format"
+    Nothing -> do
+      C.putStrLn $ "Invalid command format of " <> requestRaw
+      return "Invalid command format"
 
  where
   encode :: Aeson.Value -> CommandID -> BS.ByteString

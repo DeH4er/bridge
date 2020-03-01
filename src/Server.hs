@@ -24,7 +24,10 @@ entry = do
     loopClient client
 
  where
-  acceptClient server = fst <$> S.accept server
+  acceptClient server = do
+    (socket, ip) <- S.accept server
+    putStrLn $ show ip <> " connected"
+    return socket
 
   openServer = do
     server <- S.socket S.AF_INET S.Stream S.defaultProtocol

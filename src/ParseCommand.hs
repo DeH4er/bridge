@@ -16,6 +16,7 @@ import           Data.Text
 
 data Command = Connect
              | Echo Text
+             deriving (Show)
 
 
 newtype CommandID = CommandID Int
