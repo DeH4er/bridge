@@ -7,7 +7,9 @@ import qualified Network.Socket.ByteString     as SB
 import qualified Data.ByteString               as BS
 import qualified Data.ByteString.Lazy          as BL
 import qualified Data.ByteString.Char8         as C
-import           Control.Monad                  ( forever )
+import           Control.Monad                  ( forever
+                                                , when
+                                                )
 import           Control.Applicative            ( (<$) )
 import qualified CommandExecutor
 import qualified Data.Aeson                    as Aeson
@@ -39,11 +41,12 @@ loopClient client = do
   msg <- receiveMessage
 
   if closedConnection msg
-    then return ()
+    then do
+      putStrLn "Closed connection"
+      return ()
     else do
       response <- CommandExecutor.executeRequest msg
-      send client response
-
+      send response
       loopClient client
 
  where
@@ -54,25 +57,23 @@ loopClient client = do
   closedConnection "" = True
   closedConnection _  = False
 
-  send :: S.Socket -> BS.ByteString -> IO ()
-  send client msg = do
+  send :: BS.ByteString -> IO ()
+  send msg = do
     let msgLen = BS.length msg
     bytesSent <- SB.send client msg
-    if bytesSent < msgLen
-      then send client $ BS.drop bytesSent msg
-      else return ()
+    when (bytesSent < msgLen) $ send $ BS.drop bytesSent msg
 
   _receiveMessage :: BS.ByteString -> IO BS.ByteString
   _receiveMessage msg = do
     msgChunk <- SB.recv client maxMsgLen
-    let len = BS.length msgChunk
-    if isFullMsg msgChunk len
-      then return $ msgChunk <> msg
-      else _receiveMessage $ msgChunk <> msg
+    let fullMsg = msgChunk <> msg
+    if isFullMsg msgChunk
+      then return fullMsg
+      else _receiveMessage fullMsg
 
-  isFullMsg :: BS.ByteString -> Int -> Bool
-  isFullMsg msg len | len < maxMsgLen    = True
-                    | C.last msg == '\n' = True
-                    | otherwise          = False
+  isFullMsg :: BS.ByteString -> Bool
+  isFullMsg msg | BS.length msg < maxMsgLen = True
+                | C.last msg == '\n'        = True
+                | otherwise                 = False
 
   maxMsgLen = 4096
