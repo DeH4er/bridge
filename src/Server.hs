@@ -2,44 +2,32 @@
 
 module Server where
 
-import qualified Network.Socket                as S
 import qualified Network.Socket.ByteString     as SB
 import qualified Data.ByteString               as BS
-import qualified Data.ByteString.Lazy          as BL
 import qualified Data.ByteString.Char8         as C
 import           Control.Monad                  ( forever
                                                 , when
+                                                , unless
+                                                , void
                                                 )
-import           Control.Applicative            ( (<$) )
 import qualified CommandExecutor
 import qualified Data.Aeson                    as Aeson
 
 import           ParseCommand
 
+import           Control.Concurrent             ( forkFinally )
+import qualified Control.Exception             as E
+import qualified Data.ByteString               as S
+import           Network.Socket
+import           Network.Socket.ByteString      ( recv
+                                                , sendAll
+                                                )
+
 entry :: IO ()
-entry = do
-  server <- openServer
-  forever $ do
-    client <- acceptClient server
-    loopClient client
-
- where
-  acceptClient server = do
-    (socket, ip) <- S.accept server
-    putStrLn $ show ip <> " connected"
-    return socket
-
-  openServer = do
-    server <- S.socket S.AF_INET S.Stream S.defaultProtocol
-    S.bind server (S.SockAddrInet port S.iNADDR_ANY)
-    S.listen server 1
-    putStrLn $ "Listening on " ++ show port
-    return server
-
-  port = 4203
+entry = runTCPServer Nothing "4203" loopClient
 
 
-loopClient :: S.Socket -> IO ()
+loopClient :: Socket -> IO ()
 loopClient client = do
   msg <- receiveMessage
 
@@ -70,9 +58,7 @@ loopClient client = do
   _receiveMessage msg = do
     msgChunk <- SB.recv client maxMsgLen
     let fullMsg = msgChunk <> msg
-    if isFullMsg msgChunk
-      then return fullMsg
-      else _receiveMessage fullMsg
+    if isFullMsg msgChunk then return fullMsg else _receiveMessage fullMsg
 
   isFullMsg :: BS.ByteString -> Bool
   isFullMsg msg | BS.length msg < maxMsgLen = True
@@ -80,3 +66,26 @@ loopClient client = do
                 | otherwise                 = False
 
   maxMsgLen = 4096
+
+
+runTCPServer :: Maybe HostName -> ServiceName -> (Socket -> IO a) -> IO a
+runTCPServer mhost port server = withSocketsDo $ do
+  addr <- resolve
+  E.bracket (open addr) close loop
+ where
+  resolve = head <$> getAddrInfo (Just hints) mhost (Just port)
+   where
+    hints = defaultHints { addrFlags = [AI_PASSIVE], addrSocketType = Stream }
+
+  open addr = do
+    sock <- socket (addrFamily addr) (addrSocketType addr) (addrProtocol addr)
+    setSocketOption sock ReuseAddr 1
+    withFdSocket sock setCloseOnExecIfNeeded
+    bind sock $ addrAddress addr
+    listen sock 1024
+    return sock
+
+  loop sock = forever $ do
+    (conn, _peer) <- accept sock
+    void $ forkFinally (server conn) (const $ gracefulClose conn 5000)
+
