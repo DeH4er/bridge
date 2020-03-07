@@ -33,8 +33,8 @@ runArg HelpArg    = helpCommand
 runArg InvalidArg = invalidCommand
 
 
-processCommand = Process.entry
 processCommand :: IO ()
+processCommand = Process.entry
 
 
 serverCommand :: IO ()
