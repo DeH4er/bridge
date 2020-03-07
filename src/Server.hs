@@ -2,26 +2,26 @@
 
 module Server where
 
+import qualified Data.Aeson                    as Aeson
+import qualified Control.Exception             as E
+import qualified Data.ByteString               as S
 import qualified Network.Socket.ByteString     as SB
 import qualified Data.ByteString               as BS
 import qualified Data.ByteString.Char8         as C
+
+import           Control.Concurrent             ( forkFinally )
 import           Control.Monad                  ( forever
                                                 , when
                                                 , unless
                                                 , void
                                                 )
-import qualified CommandExecutor
-import qualified Data.Aeson                    as Aeson
+import           Network.Socket
 
+import qualified CommandExecutor
 import           ParseCommand
 
-import           Control.Concurrent             ( forkFinally )
-import qualified Control.Exception             as E
-import qualified Data.ByteString               as S
-import           Network.Socket
-import           Network.Socket.ByteString      ( recv
-                                                , sendAll
-                                                )
+
+
 
 entry :: IO ()
 entry = runTCPServer Nothing "4203" loopClient
