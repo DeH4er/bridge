@@ -29,16 +29,14 @@ entry = runTCPServer Nothing "4203" loopClient
 
 loopClient :: Socket -> IO ()
 loopClient client = do
-  msg <- receiveMessage
+  request <- receiveMessage
 
-  if closedConnection msg
+  if not $ closedConnection request
     then do
-      putStrLn "Closed connection"
-      return ()
-    else do
-      response <- CommandExecutor.executeRequest msg
+      response <- CommandExecutor.executeRequest request
       send response
       loopClient client
+    else putStrLn "Closed connection"
 
  where
   receiveMessage :: IO BS.ByteString
