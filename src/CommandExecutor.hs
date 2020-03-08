@@ -9,13 +9,14 @@ import qualified Data.ByteString.Char8         as C
 import qualified Data.ByteString.Lazy          as BL
 import           ParseCommand
 
+
 executeRequest :: BS.ByteString -> IO BS.ByteString
 executeRequest requestRaw = do
   let request = parseRequest requestRaw
   case request of
     Just (command, id) -> do
       putStrLn $ "Execute " <> show command
-      response <- CommandExecutor.executeCommand command
+      response <- executeCommand command
       return $ encode response id
     Nothing -> do
       C.putStrLn $ "Invalid command format of " <> requestRaw
